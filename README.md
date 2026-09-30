@@ -55,10 +55,18 @@ function-valued scope entries — a core expr-eval pattern this fork preserves).
 
 ### Performance
 
-Identical to upstream `expr-eval@2.0.2` for `evaluate()` (the interpreter is
-untouched on the hot path): ~1.44 µs/op for a function-dense formula with a
-100-key scope on Node 24, vs ~1.5–1.7 µs for the other patched forks and
-~1.7–1.9 µs for mathjs. Run `node bench/` for the comparison harness.
+Since 2.2.0, expressions are closure-compiled: each expression is compiled
+once into a tree of nested closures and evaluated as plain function calls —
+no dispatch switch, no value stack, no repeated hash lookups. On Node 24,
+pre-parsed `evaluate()` vs upstream 2.0.2:
+
+- function-dense formula with function-valued scope: **~9x faster**
+- variable-heavy arithmetic: **~3.5x**
+- small expressions: **~3.25x**
+
+(For comparison, mathjs measured ~1.3x *slower* than upstream on the same
+workload, and the other patched forks ~1.2-1.7x slower.) Run
+`node bench/evaluate.mjs` for the comparison harness.
 
 ### Installing
 

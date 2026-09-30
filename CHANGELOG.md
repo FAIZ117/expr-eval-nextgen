@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.2.0] - 2026-09-30
+
+### Performance: closure compilation of the expression tree
+
+`evaluate()` no longer walks the RPN instruction stream with a value stack.
+Each expression is compiled once (lazily, on first evaluate) into a tree of
+nested closures — plain function calls that JIT extremely well. Semantics
+are preserved instruction-for-instruction, including short-circuit `and`/`or`,
+lazy ternary branches, assignment side effects on the scope object, inline
+function definitions, statement discards, and the `-0` -> `0` result
+normalization.
+
+Measured vs 2.1.0 / upstream 2.0.2 (Node 24, pre-parsed evaluate):
+- function-dense formula with function-valued scope: ~9x faster
+- variable-heavy arithmetic: ~3.5x
+- small expressions: ~3.25x
+- parse + first evaluate (compile cost included): ~7% faster
+
+Verified by: full test suite (448 tests) and a parity run of 7,987
+real-world formulas from a production FP&A model — identical results and
+identical error messages on every one.
+
 ## [2.1.0] - 2026-09-30
 
 First release of expr-eval-nextgen, a hardened continuation of expr-eval 2.0.2

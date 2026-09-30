@@ -1,6 +1,7 @@
 import simplify from './simplify';
 import substitute from './substitute';
 import evaluate from './evaluate';
+import compile from './compile';
 import expressionToString from './expression-to-string';
 import getSymbols from './get-symbols';
 
@@ -48,7 +49,12 @@ export function validateScope(values) {
 Expression.prototype.evaluate = function (values) {
   values = values || {};
   validateScope(values);
-  return evaluate(this.tokens, this, values);
+  // Closure-compiled once per expression; simplify()/substitute() build new
+  // Expression instances, so an instance-level cache never goes stale.
+  if (!this._compiled) {
+    this._compiled = compile(this.tokens, this);
+  }
+  return this._compiled(values);
 };
 
 Expression.prototype.toString = function () {
