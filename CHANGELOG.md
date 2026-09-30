@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.1.0] - 2026-09-30
+
+First release of expr-eval-nextgen, a hardened continuation of expr-eval 2.0.2
+(based on upstream master). Original engine by Matthew Crumley (MIT). Security:
+
+### Security
+
+- Parse-time rejection of `__proto__`/`prototype`/`constructor` as variable,
+  member, and function-parameter names (CVE-2025-13204 / GHSA-8gw3-rxh4-v6jx).
+  Replaces upstream master's per-evaluation regex check, so evaluation is as
+  fast as upstream 2.0.2.
+- `evaluate()` rejects scope objects carrying own `__proto__`/`prototype`/
+  `constructor` keys, validated once per unique scope object via WeakMap
+  (CVE-2025-12735 / GHSA-jc85-fpwf-qm7x). Function-valued scope entries keep
+  working — unlike expr-eval-fork and safe-expr-eval.
+- `toJSFunction()` disabled: always throws instead of compiling expressions
+  with `new Function()` (CVE-2026-12866 / GHSA-q9v2-7m5w-4693).
+- New export `validateScope(values)` for app-side pre-validation.
+
+### Changed
+
+- `package.json` now has an `exports` map with types/require/import entries
+  (upstream issue #280).
+- Published to npm as `expr-eval-nextgen`.
+
 ## [2.0.2] - 2019-09-28
 
 ### Added

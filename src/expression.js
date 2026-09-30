@@ -26,8 +26,28 @@ Expression.prototype.substitute = function (variable, expr) {
   return new Expression(substitute(this.tokens, variable, expr), this.parser);
 };
 
+const validatedScopes = new WeakMap();
+const UNSAFE_SCOPE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+/**
+ * Reject scope objects carrying keys that participate in prototype-chain
+ * attacks (CVE-2025-12735 vector). Runs once per unique scope object thanks
+ * to the WeakMap gate; call it yourself at scope-construction time to skip
+ * even that lookup on the evaluate() hot path.
+ */
+export function validateScope(values) {
+  if (validatedScopes.has(values)) return;
+  for (var k in values) {
+    if (Object.prototype.hasOwnProperty.call(values, k) && UNSAFE_SCOPE_KEYS.has(k)) {
+      throw new Error('Unsafe scope key: ' + k);
+    }
+  }
+  validatedScopes.set(values, true);
+}
+
 Expression.prototype.evaluate = function (values) {
   values = values || {};
+  validateScope(values);
   return evaluate(this.tokens, this, values);
 };
 
@@ -52,10 +72,9 @@ Expression.prototype.variables = function (options) {
   });
 };
 
+// Disabled in this hardened fork: compiling expressions with new Function()
+// allowed crafted variables to execute arbitrary JavaScript (GHSA-q9v2-7m5w-4693 /
+// CVE-2026-12866). Use evaluate() instead.
 Expression.prototype.toJSFunction = function (param, variables) {
-  var expr = this;
-  var f = new Function(param, 'with(this.functions) with (this.ternaryOps) with (this.binaryOps) with (this.unaryOps) { return ' + expressionToString(this.simplify(variables).tokens, true) + '; }'); // eslint-disable-line no-new-func
-  return function () {
-    return f.apply(expr, arguments);
-  };
+  throw new Error('toJSFunction() is disabled in this hardened fork (unsafe code generation, CVE-2026-12866). Use evaluate().');
 };

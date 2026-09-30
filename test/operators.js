@@ -946,9 +946,9 @@ describe('Operators', function () {
 
       assert.strictEqual(parser.parse('sign -0.001').simplify().toString(), '(-1)');
 
-      assert.strictEqual(parser.parse('sign x').toJSFunction('x')(0), 0);
-      assert.strictEqual(parser.parse('sign x').toJSFunction('x')(2), 1);
-      assert.strictEqual(parser.parse('sign x').toJSFunction('x')(-2), -1);
+      assert.strictEqual(parser.parse('sign x').evaluate({ x: 0 }), 0);
+      assert.strictEqual(parser.parse('sign x').evaluate({ x: 2 }), 1);
+      assert.strictEqual(parser.parse('sign x').evaluate({ x: -2 }), -1);
     });
   });
 
@@ -971,7 +971,7 @@ describe('Operators', function () {
 
       assert.strictEqual(parser.parse('cbrt 8').simplify().toString(), '2');
 
-      assert.strictEqual(parser.parse('cbrt x').toJSFunction('x')(27), 3);
+      assert.strictEqual(parser.parse('cbrt x').evaluate({ x: 27 }), 3);
     });
   });
 
@@ -987,8 +987,8 @@ describe('Operators', function () {
 
       assert.ok(/^1.718281828459\d*$/.test(parser.parse('expm1 1').simplify().toString()));
 
-      assertCloseTo(parser.parse('expm1 x').toJSFunction('x')(1), 1.718281828459045, delta);
-      assertCloseTo(parser.parse('expm1 x').toJSFunction('x')(2), 6.38905609893065, delta);
+      assertCloseTo(parser.parse('expm1 x').evaluate({ x: 1 }), 1.718281828459045, delta);
+      assertCloseTo(parser.parse('expm1 x').evaluate({ x: 2 }), 6.38905609893065, delta);
     });
   });
 
@@ -1003,8 +1003,8 @@ describe('Operators', function () {
       assert.ok(isNaN(parser.evaluate('log1p -2')));
       assertCloseTo(Parser.evaluate('log1p 9'), 2.302585092994046, delta);
 
-      assertCloseTo(parser.parse('log1p x').toJSFunction('x')(1), 0.6931471805599453, delta);
-      assertCloseTo(parser.parse('log1p x').toJSFunction('x')(9), 2.302585092994046, delta);
+      assertCloseTo(parser.parse('log1p x').evaluate({ x: 1 }), 0.6931471805599453, delta);
+      assertCloseTo(parser.parse('log1p x').evaluate({ x: 9 }), 2.302585092994046, delta);
     });
   });
 
@@ -1022,8 +1022,8 @@ describe('Operators', function () {
       assert.strictEqual(Parser.evaluate('log2 8'), 3);
       assert.strictEqual(Parser.evaluate('log2 1024'), 10);
 
-      assert.strictEqual(parser.parse('log2 x').toJSFunction('x')(4), 2);
-      assertCloseTo(parser.parse('log2 x').toJSFunction('x')(3), 1.584962500721156, delta);
+      assert.strictEqual(parser.parse('log2 x').evaluate({ x: 4 }), 2);
+      assertCloseTo(parser.parse('log2 x').evaluate({ x: 3 }), 1.584962500721156, delta);
     });
   });
 });

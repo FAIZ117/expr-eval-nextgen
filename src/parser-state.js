@@ -1,5 +1,13 @@
 import { TOP, TNUMBER, TSTRING, TPAREN, TBRACKET, TCOMMA, TNAME, TSEMICOLON, TEOF } from './token';
 import { Instruction, INUMBER, IVAR, IVARNAME, IFUNCALL, IFUNDEF, IEXPR, IMEMBER, IENDSTATEMENT, IARRAY, ternaryInstruction, binaryInstruction, unaryInstruction } from './instruction';
+
+const UNSAFE_NAMES = new Set(['__proto__', 'prototype', 'constructor']);
+function assertSafeName(name, kind) {
+  if (UNSAFE_NAMES.has(name)) {
+    throw new Error('Unsafe ' + kind + ' name: ' + name);
+  }
+}
+
 import contains from './contains';
 
 export function ParserState(parser, tokenStream, options) {
@@ -64,6 +72,7 @@ ParserState.prototype.parseAtom = function (instr) {
   }
 
   if (this.accept(TNAME) || this.accept(TOP, isPrefixOperator)) {
+    assertSafeName(this.current.value, 'variable');
     instr.push(new Instruction(IVAR, this.current.value));
   } else if (this.accept(TNUMBER)) {
     instr.push(new Instruction(INUMBER, this.current.value));
@@ -154,6 +163,7 @@ ParserState.prototype.parseVariableAssignmentExpression = function (instr) {
       throw new Error('expected variable for assignment');
     }
     this.parseVariableAssignmentExpression(varValue);
+    assertSafeName(varName.value, 'parameter');
     instr.push(new Instruction(IVARNAME, varName.value));
     instr.push(new Instruction(IEXPR, varValue));
     instr.push(binaryInstruction('='));
@@ -319,6 +329,7 @@ ParserState.prototype.parseMemberExpression = function (instr) {
       }
 
       this.expect(TNAME);
+      assertSafeName(this.current.value, 'member');
       instr.push(new Instruction(IMEMBER, this.current.value));
     } else if (op.value === '[') {
       if (!this.tokens.isOperatorEnabled('[')) {

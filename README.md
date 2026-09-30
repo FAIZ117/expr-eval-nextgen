@@ -1,9 +1,77 @@
-JavaScript Expression Evaluator
+expr-eval-nextgen
 ===============================
 
 [![npm](https://img.shields.io/npm/v/expr-eval.svg?maxAge=3600)](https://www.npmjs.com/package/expr-eval)
 [![CDNJS version](https://img.shields.io/cdnjs/v/expr-eval.svg?maxAge=3600)](https://cdnjs.com/libraries/expr-eval)
 [![Build Status](https://travis-ci.org/silentmatt/expr-eval.svg?branch=master)](https://travis-ci.org/silentmatt/expr-eval)
+
+> A hardened, actively maintained continuation of
+> [expr-eval](https://github.com/silentmatt/expr-eval), published to npm as
+> [`expr-eval-nextgen`](https://www.npmjs.com/package/expr-eval-nextgen).
+> Security fixes below; everything else — API, syntax, semantics, and
+> evaluate() performance — is identical to upstream 2.0.2.
+
+Credits
+-------------------------------------
+
+This library exists because of **Matthew Crumley**
+([silentmatt](https://github.com/silentmatt)), the author of
+[expr-eval](https://github.com/silentmatt/expr-eval), who in turn ported it
+from `ndef.parser` by Raphael Graf. The parser, the stack-machine evaluator,
+and the original test suite are his work, used here under the MIT License
+(see `LICENSE.txt`, which retains his copyright notice permanently). All
+credit for the core engine belongs to him.
+
+This continuation adds the security hardening described below, the
+benchmark harness, and ongoing maintenance — nothing in it diminishes the
+upstream project; if upstream resumes releasing, this package will track it
+wherever practical.
+
+Hardened fork security model
+-------------------------------------
+
+This fork closes every advisory filed against upstream `expr-eval` ≤ 2.0.2
+without the performance or compatibility regressions of the other patched
+forks (both `expr-eval-fork` and `safe-expr-eval` break or silently ignore
+function-valued scope entries — a core expr-eval pattern this fork preserves).
+
+| Advisory | Vector | Fix in this fork |
+|---|---|---|
+| [GHSA-8gw3-rxh4-v6jx](https://github.com/advisories/GHSA-8gw3-rxh4-v6jx) / CVE-2025-13204 | Prototype pollution via `__proto__`/`prototype`/`constructor` in expressions | **Parse-time** unsafe-name ban for variable, member, and function-parameter names — rejected once at `parse()`, zero cost at `evaluate()` (also supersedes upstream master's per-evaluation regex check, making this fork *faster* than master) |
+| [GHSA-jc85-fpwf-qm7x](https://github.com/advisories/GHSA-jc85-fpwf-qm7x) / CVE-2025-12735 | Crafted variables object passed to `evaluate()` | Scope gate rejects scope objects carrying own `__proto__`/`prototype`/`constructor` keys; runs once per unique scope object (WeakMap), so per-combo scopes reused across thousands of cells pay nothing |
+| [GHSA-q9v2-7m5w-4693](https://github.com/advisories/GHSA-q9v2-7m5w-4693) / CVE-2026-12866 | Arbitrary code execution via `toJSFunction()` (`new Function` + `with`) | `toJSFunction()` is **disabled and always throws** — `evaluate()` is the only evaluation path |
+
+### Behavioral differences from upstream
+
+- `Expression.prototype.toJSFunction()` throws instead of compiling to native
+  JavaScript. Use `evaluate()`.
+- Parsing rejects the identifiers `__proto__`, `prototype`, and `constructor`
+  anywhere a name is bound (variable reference, member access, function
+  parameter). These were never legitimate formula identifiers.
+- New export: `validateScope(values)` — pre-validate a scope object when you
+  construct it to skip the (already amortized) gate on the evaluate() hot path.
+- `package.json` has a proper `exports` map with an ESM entry point
+  (upstream issue #280).
+
+### Performance
+
+Identical to upstream `expr-eval@2.0.2` for `evaluate()` (the interpreter is
+untouched on the hot path): ~1.44 µs/op for a function-dense formula with a
+100-key scope on Node 24, vs ~1.5–1.7 µs for the other patched forks and
+~1.7–1.9 µs for mathjs. Run `node bench/` for the comparison harness.
+
+### Installing
+
+```bash
+npm install expr-eval-nextgen
+```
+
+```js
+const { Parser } = require('expr-eval-nextgen');
+// or: import { Parser } from 'expr-eval-nextgen';
+```
+
+
 
 Description
 -------------------------------------

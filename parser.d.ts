@@ -59,6 +59,8 @@ export interface ParserOptions {
   };
 }
 
+export declare function validateScope(values: Values): void;
+
 export class Parser {
     constructor(options?: ParserOptions);
     unaryOps: any;
@@ -76,5 +78,6 @@ export interface Expression {
     substitute(variable: string, value: Expression | string | number): Expression;
     symbols(options?: { withMembers?: boolean }): string[];
     variables(options?: { withMembers?: boolean }): string[];
-    toJSFunction(params: string | string[], values?: Value): (...args: any[]) => number;
+    /** Disabled in this hardened fork: always throws (CVE-2026-12866). */
+    toJSFunction(params: string | string[], values?: Value): never;
 }
