@@ -37,7 +37,7 @@ const UNSAFE_SCOPE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
  * even that lookup on the evaluate() hot path.
  */
 export function validateScope(values) {
-  if (validatedScopes.has(values)) return;
+  if (validatedScopes.get(values) === true) return;
   for (var k in values) {
     if (Object.prototype.hasOwnProperty.call(values, k) && UNSAFE_SCOPE_KEYS.has(k)) {
       throw new Error('Unsafe scope key: ' + k);

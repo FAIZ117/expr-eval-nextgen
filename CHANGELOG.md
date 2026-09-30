@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.3.0] - 2026-09-30
+
+### Performance: operand inlining and constant folding in the closure compiler
+
+Compile-time entries are now tagged (literal / scope-only variable / dynamic)
+so hot consumers bake scope reads and constants directly into their closures
+instead of calling a sub-closure per operand, the dominant fn(var) call
+shapes are specialized end-to-end, the callable check is a single typeof
+instead of two property lookups, and pure ops over two literals fold to one
+literal at compile time.
+
+Measured vs 2.2.0 (same process, pre-parsed evaluate, Node 24):
+- function-dense with function-valued scope: +23%
+- variable-heavy arithmetic: +41%
+- small expressions: +19%
+- constant expressions: +138% (folding)
+
+Cumulative vs upstream expr-eval 2.0.2: ~12x on function-dense, ~6x on small
+expressions. Gates: 448 tests; parity run of 7,987 production FP&A formulas
+against the pre-closure 2.1.0 stack engine — identical results and error
+messages throughout.
+
+### Fixed
+
+- `exports` map now exposes `./package.json` (required by tooling that reads
+  installed package versions).
+
 ## [2.2.0] - 2026-09-30
 
 ### Performance: closure compilation of the expression tree

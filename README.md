@@ -60,11 +60,15 @@ once into a tree of nested closures and evaluated as plain function calls —
 no dispatch switch, no value stack, no repeated hash lookups. On Node 24,
 pre-parsed `evaluate()` vs upstream 2.0.2:
 
-- function-dense formula with function-valued scope: **~9x faster**
-- variable-heavy arithmetic: **~3.5x**
-- small expressions: **~3.25x**
+- function-dense formula with function-valued scope: **~12x faster**
+- variable-heavy arithmetic: **~5x**
+- small expressions: **~6x**
+- constant expressions fold at compile time: **~100x+**
 
-(For comparison, mathjs measured ~1.3x *slower* than upstream on the same
+Since 2.3.0 the compiler tags operands (literal / scope variable / dynamic),
+inlines scope reads and constants into their consumers, specializes the
+dominant `fn(var)` call shapes, and constant-folds pure literal ops. (For
+comparison, mathjs measured ~1.3x *slower* than upstream on the same
 workload, and the other patched forks ~1.2-1.7x slower.) Run
 `node bench/evaluate.mjs` for the comparison harness.
 
