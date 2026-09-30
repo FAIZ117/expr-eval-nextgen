@@ -450,5 +450,8 @@ TokenStream.prototype.getCoordinates = function () {
 
 TokenStream.prototype.parseError = function (msg) {
   var coords = this.getCoordinates();
-  throw new Error('parse error [' + coords.line + ':' + coords.column + ']: ' + msg);
+  var err = new Error('parse error [' + coords.line + ':' + coords.column + ']: ' + msg);
+  err.line = coords.line;
+  err.column = coords.column;
+  throw err;
 };

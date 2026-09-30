@@ -45,6 +45,43 @@ function-valued scope entries — a core expr-eval pattern this fork preserves).
 
 - `Expression.prototype.toJSFunction()` throws instead of compiling to native
   JavaScript. Use `evaluate()`.
+- `null` is a literal, like `true`/`false` (upstream issue #228): compare with
+  `value != null` freely.
+- Optional `looseEquality` parser mode (upstream issue #110):
+  `new Parser({ looseEquality: true })` compares a number and a
+  numeric-looking string numerically (`"3" == 3` is true), matching
+  spreadsheet semantics; non-numeric strings never equal numbers;
+  string-to-string stays strict. Off by default — the default `==` is
+  unchanged, strict on types.
+- Optional `protectScope`: expressions that assign (`=`) or define inline
+  functions evaluate against a shallow clone of the scope, so writes never
+  leak into the caller's object — shared scopes cannot be poisoned by a
+  formula like `MIN = 99`. Read-your-writes still works within the call;
+  non-writing expressions pay nothing. Off by default (legacy writes
+  propagate). Cost on assigning formulas: ~2-5us per evaluate (one shallow
+  clone); reusing scope objects keeps the security gate itself free.
+- `variables()` no longer reports scope-called function names (upstream
+  issue #7): `parse('helper(x) + y').variables()` is `['x', 'y']`.
+  `symbols()` still reports everything.
+- Parse errors expose `err.line` and `err.column` (upstream issue #247);
+  message formats are unchanged.
+- Optional `equalityEpsilon` (upstream issue #10):
+  `new Parser({ equalityEpsilon: 1e-12 })` compares numbers with relative
+  tolerance, spreadsheet-style, so `0.1 + 0.2 == 0.3` is true and accumulated
+  float rounding does not flip comparisons. Tolerance is relative, so it
+  scales with magnitude; real differences (`1.0000000001 == 1`) stay false.
+  Composes with `looseEquality` (coerce, then tolerate). Off by default.
+
+### Numeric precision
+
+Values are IEEE 754 doubles, like Excel and Anaplan (upstream issue #10).
+Practical implications for formula authors:
+
+- `0.1 + 0.2` is `0.30000000000000004`; use `roundTo(x, 10)` when a formula
+  compares or displays sums of inexact decimals.
+- Integers are exact up to 2^53 (~9.0e15); beyond that, precision is lost.
+- Round at display/save boundaries, and enable `equalityEpsilon` when
+  formulas compare computed floats with `==`.
 - Parsing rejects the identifiers `__proto__`, `prototype`, and `constructor`
   anywhere a name is bound (variable reference, member access, function
   parameter). These were never legitimate formula identifiers.

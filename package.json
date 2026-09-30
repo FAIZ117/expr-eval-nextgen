@@ -1,6 +1,6 @@
 {
   "name": "expr-eval-nextgen",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Mathematical expression evaluator \u2014 hardened fork (CVE-2025-13204, CVE-2025-12735, CVE-2026-12866 closed; scope functions preserved; parse-time checks, no eval-time overhead)",
   "main": "dist/bundle.js",
   "module": "dist/index.mjs",

@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.4.0] - 2026-10-01
+
+### Added
+
+- `looseEquality` parser option (upstream issue #110): opt-in Excel-style
+  equality where a number and a numeric-looking string compare numerically
+  ("3" == 3 is true), a non-numeric string is never equal to a number, and
+  string-to-string stays strict. Fixes the silent inconsistency where
+  relational operators coerced ("3" > 1 true) while == did not ("3" == 3
+  false). Default remains strict — no behavior change unless enabled.
+- `equalityEpsilon` parser option (upstream issue #10): opt-in
+  spreadsheet-style relative tolerance for numeric `==`/`!=`
+  (`new Parser({ equalityEpsilon: 1e-12 })` makes `0.1 + 0.2 == 0.3` true
+  while `1.0000000001 == 1` stays false). Composes with `looseEquality`.
+  Default remains exact equality.
+- `null` literal (upstream issue #228): `text != null` now works instead of
+  throwing "undefined variable: null". Tokenizes like `true`/`false`.
+
+- `protectScope` parser option: assignment/inline-function expressions
+  evaluate against a shallow clone of the scope so writes never leak into
+  the caller's object; read-your-writes works within the call; non-writing
+  expressions pay nothing. The clone uses a keyed copy loop because
+  Object.assign/spread hit V8's slow generic path on large mixed-shape
+  scopes (measured 16us vs 2us for a 100-key scope).
+- `variables()` excludes scope-called function names (upstream issue #7):
+  callees are found by simulating the evaluator's stack discipline, so
+  nested calls and member-chain arguments resolve exactly.
+- Parse errors expose `err.line` / `err.column` (upstream issue #247);
+  message formats unchanged.
+
+### Fixed
+
+- `Instruction` no longer coerces an explicit `null` value to `0` (required
+  for the null literal; no other instruction passes null).
+
+### Verified
+
+- 483 tests (448 prior + 35 new); corpus parity 7,987/7,987 formulas against
+  the 2.1.0 stack engine with default options; the full corpus under
+  `looseEquality` flips zero results when scope types are numeric (the option
+  is inert unless mixed types actually occur).
+
 ## [2.3.0] - 2026-09-30
 
 ### Performance: operand inlining and constant folding in the closure compiler

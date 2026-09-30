@@ -23,6 +23,21 @@ export default function compile(tokens, expr) {
   return compileSequence(tokens, expr);
 }
 
+/**
+ * True when the expression writes to its scope: assignment (=) or an inline
+ * function definition. Used by protectScope to clone the caller's scope so
+ * those writes never leak out.
+ */
+export function containsAssignment(tokens) {
+  for (var i = 0; i < tokens.length; i++) {
+    var item = tokens[i];
+    if (item.type === IOP2 && item.value === '=') return true;
+    if (item.type === IFUNDEF) return true;
+    if (item.type === IEXPR && containsAssignment(item.value)) return true;
+  }
+  return false;
+}
+
 function compileSequence(tokens, expr) {
   var stack = []; // tagged entries, in RPN order
   var discarded = []; // statement results dropped by IENDSTATEMENT (side effects still run)

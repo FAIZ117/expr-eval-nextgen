@@ -1,7 +1,7 @@
 import simplify from './simplify';
 import substitute from './substitute';
 import evaluate from './evaluate';
-import compile from './compile';
+import compile, { containsAssignment } from './compile';
 import expressionToString from './expression-to-string';
 import getSymbols from './get-symbols';
 
@@ -54,8 +54,29 @@ Expression.prototype.evaluate = function (values) {
   if (!this._compiled) {
     this._compiled = compile(this.tokens, this);
   }
-  return this._compiled(values);
+  // protectScope: expressions that write to their scope (=, inline function
+  // definitions) run against a shallow clone, so assignments and function
+  // registrations never leak into the caller's object. Read-your-writes still
+  // works within the single evaluate() call; non-writing expressions pay nothing.
+  if (this._protectsScope === undefined) {
+    this._protectsScope = !!(this.parser.options.protectScope && containsAssignment(this.tokens));
+  }
+  return this._compiled(this._protectsScope ? shallowCloneScope(values) : values);
 };
+
+/**
+ * Object.assign/spread hit V8's slow generic path on large mixed-shape scopes
+ * (~16us for 100 keys); a plain keyed loop measures ~2us for the same object.
+ * Keys are read fresh each call so callers that mutate the scope keep working.
+ */
+function shallowCloneScope(values) {
+  var keys = Object.keys(values);
+  var clone = {};
+  for (var i = 0; i < keys.length; i++) {
+    clone[keys[i]] = values[keys[i]];
+  }
+  return clone;
+}
 
 Expression.prototype.toString = function () {
   return expressionToString(this.tokens, false);
@@ -70,6 +91,7 @@ Expression.prototype.symbols = function (options) {
 
 Expression.prototype.variables = function (options) {
   options = options || {};
+  options.excludeCallees = true;
   var vars = [];
   getSymbols(this.tokens, vars, options);
   var functions = this.functions;

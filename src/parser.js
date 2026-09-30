@@ -11,6 +11,7 @@ import {
   concat,
   equal,
   notEqual,
+  createEqualityOps,
   greaterThan,
   lessThan,
   greaterThanEqual,
@@ -139,8 +140,18 @@ export function Parser(options) {
     E: Math.E,
     PI: Math.PI,
     'true': true,
-    'false': false
+    'false': false,
+    'null': null
   };
+
+  if (this.options.looseEquality || this.options.equalityEpsilon) {
+    var eqOps = createEqualityOps(
+      !!this.options.looseEquality,
+      Number(this.options.equalityEpsilon) || 0
+    );
+    this.binaryOps['=='] = eqOps.equal;
+    this.binaryOps['!='] = eqOps.notEqual;
+  }
 }
 
 Parser.prototype.parse = function (expr) {

@@ -61,7 +61,10 @@ ParserState.prototype.accept = function (type, value) {
 ParserState.prototype.expect = function (type, value) {
   if (!this.accept(type, value)) {
     var coords = this.tokens.getCoordinates();
-    throw new Error('parse error [' + coords.line + ':' + coords.column + ']: Expected ' + (value || type));
+    var err = new Error('parse error [' + coords.line + ':' + coords.column + ']: Expected ' + (value || type));
+    err.line = coords.line;
+    err.column = coords.column;
+    throw err;
   }
 };
 
@@ -89,7 +92,11 @@ ParserState.prototype.parseAtom = function (instr) {
       instr.push(new Instruction(IARRAY, argCount));
     }
   } else {
-    throw new Error('unexpected ' + this.nextToken);
+    var unexpectedErr = new Error('unexpected ' + this.nextToken);
+    var unexpectedCoords = this.tokens.getCoordinates();
+    unexpectedErr.line = unexpectedCoords.line;
+    unexpectedErr.column = unexpectedCoords.column;
+    throw unexpectedErr;
   }
 };
 

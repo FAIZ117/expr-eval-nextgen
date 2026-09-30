@@ -35,6 +35,46 @@ export function notEqual(a, b) {
   return a !== b;
 }
 
+/**
+ * Build the == / != operators (upstream issues #110 and #10). Both knobs are
+ * independent and composable:
+ *   coerce  — Excel-style: a number and a numeric-looking string compare
+ *             numerically; a non-numeric string never equals a number.
+ *   epsilon — spreadsheet-style: numbers compare with relative tolerance,
+ *             so accumulated float rounding (0.1 + 0.2) does not flip
+ *             comparisons. 0 disables (exact ===).
+ */
+export function createEqualityOps(coerce, epsilon) {
+  function eq(a, b) {
+    if (typeof a === 'number' && typeof b === 'number') {
+      if (epsilon > 0) {
+        var d = Math.abs(a - b);
+        if (d <= Number.MIN_VALUE) return true;
+        return d <= epsilon * Math.max(Math.abs(a), Math.abs(b));
+      }
+      return a === b;
+    }
+    if (coerce) {
+      if (typeof a === 'string' && typeof b === 'number') return numericStringEquals(b, a);
+      if (typeof a === 'number' && typeof b === 'string') return numericStringEquals(a, b);
+    }
+    return a === b;
+  }
+
+  function numericStringEquals(num, str) {
+    var s = str.trim();
+    if (s === '' || isNaN(Number(s))) return false;
+    return eq(num, Number(s));
+  }
+
+  return {
+    equal: eq,
+    notEqual: function (a, b) {
+      return !eq(a, b);
+    }
+  };
+}
+
 export function greaterThan(a, b) {
   return a > b;
 }
