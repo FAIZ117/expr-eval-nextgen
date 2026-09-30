@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.4.1] - 2026-10-01
+
+### Documentation
+
+Full README audit; thirteen stale items corrected:
+
+- Badges now point at this package and its GitHub Actions CI (were: upstream
+  expr-eval npm badge, dead Travis-CI badge, CDNJS badge).
+- All references to the old package name in install/usage examples fixed.
+- Header no longer claims evaluate() performance is "identical to upstream"
+  (it is up to ~9x faster since 2.2.0; defaults remain identical).
+- toJSFunction() API section replaced with the disabled-for-CVE notice
+  (the old section documented it as working, with examples).
+- "Compiled into native JavaScript functions" phrasing removed from the
+  description and Expression intro.
+- Constants table documents the null literal.
+- variables() documents callee exclusion; function definitions document
+  protectScope; tests section notes --legacy-peer-deps.
+- Three behavioral-difference bullets that had drifted into the "Numeric
+  precision" section moved to a proper "Other differences" section.
+- Performance figures updated to the final measured set.
+
+No code changes; 483 tests unchanged.
+
 ## [2.4.0] - 2026-10-01
 
 ### Added

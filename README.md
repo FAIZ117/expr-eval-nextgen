@@ -1,15 +1,15 @@
 expr-eval-nextgen
 ===============================
 
-[![npm](https://img.shields.io/npm/v/expr-eval.svg?maxAge=3600)](https://www.npmjs.com/package/expr-eval)
-[![CDNJS version](https://img.shields.io/cdnjs/v/expr-eval.svg?maxAge=3600)](https://cdnjs.com/libraries/expr-eval)
-[![Build Status](https://travis-ci.org/silentmatt/expr-eval.svg?branch=master)](https://travis-ci.org/silentmatt/expr-eval)
+[![npm](https://img.shields.io/npm/v/expr-eval-nextgen.svg?maxAge=3600)](https://www.npmjs.com/package/expr-eval-nextgen)
+[![CI](https://github.com/FAIZ117/expr-eval-nextgen/actions/workflows/ci.yml/badge.svg)](https://github.com/FAIZ117/expr-eval-nextgen/actions/workflows/ci.yml)
 
 > A hardened, actively maintained continuation of
 > [expr-eval](https://github.com/silentmatt/expr-eval), published to npm as
 > [`expr-eval-nextgen`](https://www.npmjs.com/package/expr-eval-nextgen).
-> Security fixes below; everything else — API, syntax, semantics, and
-> evaluate() performance — is identical to upstream 2.0.2.
+> Security fixes below, spreadsheet-grade equality options, and an
+> evaluate() path that is up to ~9x faster than upstream — while default
+> API, syntax, and semantics stay identical to upstream 2.0.2.
 
 Credits
 -------------------------------------
@@ -82,6 +82,9 @@ Practical implications for formula authors:
 - Integers are exact up to 2^53 (~9.0e15); beyond that, precision is lost.
 - Round at display/save boundaries, and enable `equalityEpsilon` when
   formulas compare computed floats with `==`.
+
+### Other differences from upstream
+
 - Parsing rejects the identifiers `__proto__`, `prototype`, and `constructor`
   anywhere a name is bound (variable reference, member access, function
   parameter). These were never legitimate formula identifiers.
@@ -97,9 +100,10 @@ once into a tree of nested closures and evaluated as plain function calls —
 no dispatch switch, no value stack, no repeated hash lookups. On Node 24,
 pre-parsed `evaluate()` vs upstream 2.0.2:
 
-- function-dense formula with function-valued scope: **~12x faster**
-- variable-heavy arithmetic: **~5x**
-- small expressions: **~6x**
+- function-dense formula with function-valued scope: **~9-12x faster**
+- variable-heavy arithmetic: **~6x**
+- equality-heavy formulas: **~13x**
+- small expressions (reused scope): **~10x**
 - constant expressions fold at compile time: **~100x+**
 
 Since 2.3.0 the compiler tags operands (literal / scope variable / dynamic),
@@ -131,17 +135,18 @@ expressions.
 
 It has built-in support for common math operators and functions. Additionally,
 you can add your own JavaScript functions. Expressions can be evaluated
-directly, or compiled into native JavaScript functions.
+directly (in this fork, `toJSFunction()` code generation is disabled for
+security — see above).
 
 Installation
 -------------------------------------
 
-    npm install expr-eval
+    npm install expr-eval-nextgen
 
 Basic Usage
 -------------------------------------
 ```js
-    const Parser = require('expr-eval').Parser;
+    const Parser = require('expr-eval-nextgen').Parser;
 
     const parser = new Parser();
     let expr = parser.parse('2 * x + 1');
@@ -165,7 +170,7 @@ Documentation
     - [variables(options?: object)](#variablesoptions-object)
     - [symbols(options?: object)](#symbolsoptions-object)
     - [toString()](#tostring)
-    - [toJSFunction(parameters: array | string, variables?: object)](#tojsfunctionparameters-array--string-variables-object)
+    - [toJSFunction (disabled in this fork)](#tojsfunction-disabled-in-this-fork)
 * [Expression Syntax](#expression-syntax)
     - [Operator Precedence](#operator-precedence)
     - [Unary operators](#unary-operators)
@@ -230,8 +235,7 @@ Parser.parse(expr).evaluate(vars).
 
 `Parser.parse(str)` returns an `Expression` object. `Expression`s are similar to
 JavaScript functions, i.e. they can be "called" with variables bound to
-passed-in values. In fact, they can even be converted into JavaScript
-functions.
+passed-in values.
 
 #### evaluate(variables?: object)
 
@@ -279,7 +283,9 @@ replaced with "8", resulting in `((8*x)+1)`.
 ```
 #### variables(options?: object)
 
-Get an array of the unbound variables in the expression.
+Get an array of the unbound variables in the expression. Names that only
+appear as called functions (`helper(x)`) are not included; use `symbols()`
+for everything.
 ```js
     js> expr = Parser.parse("x * (y * atan(1))");
     (x*(y*atan(1)))
@@ -310,25 +316,13 @@ Convert the expression to a string. `toString()` surrounds every sub-expression
 with parentheses (except literal values, variables, and function calls), so
 it’s useful for debugging precedence errors.
 
-#### toJSFunction(parameters: array | string, variables?: object)
+#### toJSFunction (disabled in this fork)
 
-Convert an `Expression` object into a callable JavaScript function. `parameters`
-is an array of parameter names, or a string, with the names separated by commas.
-
-If the optional `variables` argument is provided, the expression will be
-simplified with variables bound to the supplied values.
-```js
-    js> expr = Parser.parse("x + y + z");
-    ((x + y) + z)
-    js> f = expr.toJSFunction("x,y,z");
-    [Function] // function (x, y, z) { return x + y + z; };
-    js> f(1, 2, 3)
-    6
-    js> f = expr.toJSFunction("y,z", { x: 100 });
-    [Function] // function (y, z) { return 100 + y + z; };
-    js> f(2, 3)
-    105
-```
+**Removed for security** (CVE-2026-12866 / GHSA-q9v2-7m5w-4693): this method
+compiled expressions into native JavaScript via `new Function()`, which allowed
+crafted variables to execute arbitrary code. It now always throws. Use
+`evaluate()` — since 2.2.0 it is closure-compiled and several times faster than
+upstream's interpreter anyway.
 ### Expression Syntax ###
 
 The parser accepts a pretty basic grammar. It's similar to normal JavaScript
@@ -440,7 +434,7 @@ Arrays can be created by including the elements inside square `[]` brackets, sep
 
 #### Function definitions
 
-You can define functions using the syntax `name(params) = expression`. When it's evaluated, the name will be added to the passed in scope as a function. You can call it later in the expression, or make it available to other expressions by re-using the same scope object. Functions can support multiple parameters, separated by commas.
+You can define functions using the syntax `name(params) = expression`. When it's evaluated, the name will be added to the passed in scope as a function. You can call it later in the expression, or make it available to other expressions by re-using the same scope object. Functions can support multiple parameters, separated by commas. (With the `protectScope` option enabled, definitions stay inside the evaluation and do not leak into the scope.)
 
 Examples:
 ```js
@@ -476,6 +470,7 @@ E            | The value of `Math.E` from your JavaScript runtime
 PI           | The value of `Math.PI` from your JavaScript runtime
 true         | Logical `true` value
 false        | Logical `false` value
+null         | The `null` value (added in this fork; upstream issue #228)
 
 Pre-defined constants are stored in `parser.consts`. You can make changes to this property to customise the
 constants available to your expressions. For example:
@@ -494,5 +489,6 @@ To disable the pre-defined constants, you can replace or delete `parser.consts`:
 ### Tests ###
 
 1. `cd` to the project directory
-2. Install development dependencies: `npm install`
+2. Install development dependencies: `npm install --legacy-peer-deps`
+   (the dev toolchain predates strict peer resolution)
 3. Run the tests: `npm test`
